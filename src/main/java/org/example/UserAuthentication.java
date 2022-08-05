@@ -19,7 +19,7 @@ public class UserAuthentication {
 
     public void logIn(String userAccountNum, String userPIN) {
         Data data = Data.getInstance();
-        Account account = data.selectCard(userAccountNum);
+        Account account = data.getAccount(userAccountNum);
         this.userAccountNum = userAccountNum;
         this.userPin = userPIN;
         loggedIn = (account != null && account.getPin().equals(userPin));

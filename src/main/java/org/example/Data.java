@@ -2,10 +2,7 @@ package org.example;
 
 import org.sqlite.SQLiteDataSource;
 
-import java.sql.Connection;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.sql.Statement;
+import java.sql.*;
 
 public class Data {
     private final String url;
@@ -55,18 +52,22 @@ public class Data {
         }
     }
 
-    public Account selectCard(String number) {
-        try (Connection con = dataSource.getConnection();
-             Statement statement = con.createStatement()) {
-            try (ResultSet resultSet = statement.executeQuery(String.format("SELECT number, pin, balance " +
-                    "FROM card " +
-                    "WHERE number = %s", number))) {
-                if (resultSet.next()) {
-                    String cardNum = resultSet.getString("number");
-                    String pin = resultSet.getString("pin");
-                    int balance = resultSet.getInt("balance");
-                    return new Account(cardNum, pin, balance);
+    public Account getAccount(String number) {
+        String select = "SELECT number, pin, balance " +
+                "FROM card " +
+                "WHERE number = ?";
+        try (Connection con = dataSource.getConnection()) {
+            try (PreparedStatement preparedStatement = con.prepareStatement(select)) {
+                preparedStatement.setString(1, number);
+                try (ResultSet resultSet = preparedStatement.executeQuery()) {
+                    if (resultSet.next()) {
+                        String cardNum = resultSet.getString("number");
+                        String pin = resultSet.getString("pin");
+                        int balance = resultSet.getInt("balance");
+                        return new Account(cardNum, pin, balance);
+                    }
                 }
+
             }
         } catch (SQLException e) {
             e.printStackTrace();
@@ -74,7 +75,7 @@ public class Data {
         return null;
     }
 
-    public int selectBalance(String number) {
+    public int getBalance(String number) {
         try (Connection con = dataSource.getConnection();
              Statement statement = con.createStatement();
              ResultSet resultSet = statement.executeQuery(String.format("SELECT balance " +
@@ -86,5 +87,82 @@ public class Data {
             e.printStackTrace();
         }
         return 0;
+    }
+
+    public void addIncome(String number, int deposit) {
+        int balance = getBalance(number);
+        String update = "UPDATE card " +
+                "SET balance = ? " +
+                "WHERE number = ?";
+        try (Connection con = dataSource.getConnection()) {
+            try (PreparedStatement preparedStatement = con.prepareStatement(update)) {
+                preparedStatement.setInt(1, balance + deposit);
+                preparedStatement.setString(2, number);
+                preparedStatement.executeUpdate();
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+
+    String getAccount = "SELECT number, pin, balance " +
+            "FROM card " +
+            "WHERE number = ?";
+
+    public int getTransfereeBalance(String transfereeUserNum) {
+        try (Connection con = dataSource.getConnection()) {
+            try (PreparedStatement preparedStatement = con.prepareStatement(getAccount)) {
+                preparedStatement.setString(1, transfereeUserNum);
+                try (ResultSet resultSet = preparedStatement.executeQuery()) {
+                    if (resultSet.next()) {
+                        return resultSet.getInt("balance");
+                    } else {
+                        return -1;
+                    }
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return -1;
+    }
+
+    String setBalance = "UPDATE card " +
+            "SET balance = ? " +
+            "WHERE number = ?";
+
+    String deleteAccount = "DELETE " +
+            "FROM card " +
+            "WHERE number = ?";
+
+    public void deleteAccount(String number) {
+        try (Connection con = dataSource.getConnection()) {
+            try (PreparedStatement preparedStatement = con.prepareStatement(deleteAccount)) {
+                preparedStatement.setString(1, number);
+                preparedStatement.execute();
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public void transferBalance(String userNum, String transfereeNum,int newUserBalance, int newTransfereeBalance) {
+        try (Connection con = dataSource.getConnection()) {
+            con.setAutoCommit(false);
+            try (PreparedStatement preparedStatement = con.prepareStatement(setBalance)) {
+                preparedStatement.setInt(1, newUserBalance);
+                preparedStatement.setString(2, userNum);
+                preparedStatement.executeUpdate();
+            }
+            try (PreparedStatement preparedStatement = con.prepareStatement(setBalance)) {
+                preparedStatement.setInt(1, newTransfereeBalance);
+                preparedStatement.setString(2, transfereeNum);
+                preparedStatement.executeUpdate();
+            }
+            con.commit();
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+
     }
 }

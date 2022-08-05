@@ -40,6 +40,15 @@ public class App {
                     bankingSystem.printAccountBalance();
                     break;
                 case 2:
+                    bankingSystem.addIncome();
+                    break;
+                case 3:
+                    bankingSystem.transfer();
+                    break;
+                case 4:
+                    bankingSystem.closeAccount();
+                    return;
+                case 5:
                     bankingSystem.logout();
                     return;
                 default:
